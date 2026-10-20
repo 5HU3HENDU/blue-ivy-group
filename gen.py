@@ -93,7 +93,7 @@ PROJECTS=[
 ('siddhanchal.jpg','Design render of Siddhanchal Residency in Ghatkopar','Siddhanchal Residency','Ghatkopar, Mumbai','Residential','Design render'),
 ('amravati-mall.jpg','Design render of the commercial mall project in Amravati','Commercial Mall','Amravati','Commercial','Design render'),
 ('pahuja.jpg','Design render of Pahuja Business Avenue in Sakinaka','Pahuja Business Avenue','Sakinaka, Mumbai','Commercial','Design render'),
-('interior.jpg','Interior design and execution work','Interior Design &amp; Execution','Mumbai','Interiors',''),
+('interior.jpg','Design render of an interior designed and executed by the firm','Interior Design &amp; Execution','Mumbai','Interiors','Design render'),
 ]
 def pitem(img,alt,name,loc,cat,cap,depth=0):
     p='../'*depth
