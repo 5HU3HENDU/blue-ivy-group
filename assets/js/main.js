@@ -106,42 +106,25 @@
     upd();
   }
 
-  // Blueprint intro: decorative linework draws once per day, then fades to the render.
-  // ?intro=1 forces it (testing/demo). Reduced motion: static lines, brief hold, instant swap.
-  var bp = document.getElementById('bp');
-  if (bp) {
-    var force = /[?&]intro=1\b/.test(location.search);
-    var seen = false;
-    try {
-      var bts = localStorage.getItem('big-bp-ts');
-      seen = bts && (Date.now() - (+bts) < 864e5);
-    } catch (e) {}
-    var markSeen = function () { try { localStorage.setItem('big-bp-ts', String(Date.now())); } catch (e) {} };
-    var dropBp = function () { if (bp.parentNode) bp.parentNode.removeChild(bp); };
-    if (force || !seen) {
-      bp.hidden = false;
-      if (RM) {
-        setTimeout(function () { dropBp(); markSeen(); }, 1600);
-      } else {
-        var ps = bp.querySelectorAll('path');
-        ps.forEach(function (p, i) {
-          var l = p.getTotalLength();
-          p.style.strokeDasharray = l;
-          p.style.strokeDashoffset = l;
-          p.style.transition = 'stroke-dashoffset 1.9s ease ' + (i * 16) + 'ms';
-        });
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            ps.forEach(function (p) { p.style.strokeDashoffset = '0'; });
-          });
-        });
-        var tot = 1900 + ps.length * 16 + 700;
-        setTimeout(function () { bp.classList.add('fade'); markSeen(); }, tot);
-        setTimeout(dropBp, tot + 1300);
-      }
-    } else {
-      dropBp();
-    }
+  // Rotating wallpaper hero: slow crossfade between project renders, plain-text caption, fully passive
+  var himgs = document.querySelectorAll('.hero-img .hpi');
+  var hcap = document.getElementById('heroCap');
+  if (himgs.length > 1 && hcap && !RM) {
+    var hcn = [
+      'Siddhanchal Residency, Ghatkopar \u00b7 Design render',
+      'Commercial Mall, Amravati \u00b7 Design render',
+      'Pahuja Business Avenue, Sakinaka \u00b7 Design render'
+    ];
+    var hi = Math.floor(Math.random() * himgs.length);
+    himgs.forEach(function (im, i) { im.classList.toggle('on', i === hi); });
+    hcap.textContent = hcn[hi];
+    setInterval(function () {
+      if (document.hidden) return;
+      himgs[hi].classList.remove('on');
+      hi = (hi + 1) % himgs.length;
+      himgs[hi].classList.add('on');
+      hcap.textContent = hcn[hi];
+    }, 7000);
   }
 
   // Contact form -> mailto
