@@ -4,7 +4,7 @@
   // PWA
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register(new URL('manifest.webmanifest', document.baseURI).pathname.replace('manifest.webmanifest', '') + 'sw.js').catch(function () {});
+      navigator.serviceWorker.register(new URL('manifest.webmanifest', document.baseURI).pathname.replace('manifest.webmanifest', '') + 'sw.js').then(function (r) { if (r && r.update) r.update(); }).catch(function () {});
     });
   }
 
@@ -106,33 +106,41 @@
     upd();
   }
 
-  // Blueprint intro: decorative linework draws once per session, then fades to the render
+  // Blueprint intro: decorative linework draws once per day, then fades to the render.
+  // ?intro=1 forces it (testing/demo). Reduced motion: static lines, brief hold, instant swap.
   var bp = document.getElementById('bp');
   if (bp) {
+    var force = /[?&]intro=1\b/.test(location.search);
     var seen = false;
-    try { seen = !!sessionStorage.getItem('big-bp'); } catch (e) {}
-    if (!RM && !seen) {
+    try {
+      var bts = localStorage.getItem('big-bp-ts');
+      seen = bts && (Date.now() - (+bts) < 864e5);
+    } catch (e) {}
+    var markSeen = function () { try { localStorage.setItem('big-bp-ts', String(Date.now())); } catch (e) {} };
+    var dropBp = function () { if (bp.parentNode) bp.parentNode.removeChild(bp); };
+    if (force || !seen) {
       bp.hidden = false;
-      var ps = bp.querySelectorAll('path');
-      ps.forEach(function (p, i) {
-        var l = p.getTotalLength();
-        p.style.strokeDasharray = l;
-        p.style.strokeDashoffset = l;
-        p.style.transition = 'stroke-dashoffset 1.9s ease ' + (i * 16) + 'ms';
-      });
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          ps.forEach(function (p) { p.style.strokeDashoffset = '0'; });
+      if (RM) {
+        setTimeout(function () { dropBp(); markSeen(); }, 1600);
+      } else {
+        var ps = bp.querySelectorAll('path');
+        ps.forEach(function (p, i) {
+          var l = p.getTotalLength();
+          p.style.strokeDasharray = l;
+          p.style.strokeDashoffset = l;
+          p.style.transition = 'stroke-dashoffset 1.9s ease ' + (i * 16) + 'ms';
         });
-      });
-      var tot = 1900 + ps.length * 16 + 700;
-      setTimeout(function () {
-        bp.classList.add('fade');
-        try { sessionStorage.setItem('big-bp', '1'); } catch (e) {}
-      }, tot);
-      setTimeout(function () { if (bp.parentNode) bp.parentNode.removeChild(bp); }, tot + 1300);
-    } else if (bp.parentNode) {
-      bp.parentNode.removeChild(bp);
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            ps.forEach(function (p) { p.style.strokeDashoffset = '0'; });
+          });
+        });
+        var tot = 1900 + ps.length * 16 + 700;
+        setTimeout(function () { bp.classList.add('fade'); markSeen(); }, tot);
+        setTimeout(dropBp, tot + 1300);
+      }
+    } else {
+      dropBp();
     }
   }
 
