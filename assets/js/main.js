@@ -106,25 +106,60 @@
     upd();
   }
 
-  // Rotating wallpaper hero: slow crossfade between project renders, plain-text caption, fully passive
+  // Moving-wallpaper hero: each render glides across its full width (left edge to right
+  // edge, so the whole image is seen), then fades to the next. Plain-text caption, fully
+  // passive, reduced-motion users get a static hero.
   var himgs = document.querySelectorAll('.hero-img .hpi');
   var hcap = document.getElementById('heroCap');
-  if (himgs.length > 1 && hcap && !RM) {
+  if (himgs.length > 0 && hcap) {
     var hcn = [
       'Siddhanchal Residency, Ghatkopar \u00b7 Design render',
       'Commercial Mall, Amravati \u00b7 Design render',
       'Pahuja Business Avenue, Sakinaka \u00b7 Design render'
     ];
-    var hi = Math.floor(Math.random() * himgs.length);
-    himgs.forEach(function (im, i) { im.classList.toggle('on', i === hi); });
-    hcap.textContent = hcn[hi];
-    setInterval(function () {
-      if (document.hidden) return;
-      himgs[hi].classList.remove('on');
-      hi = (hi + 1) % himgs.length;
-      himgs[hi].classList.add('on');
-      hcap.textContent = hcn[hi];
-    }, 7000);
+    var DWELL = 8000, FADE = 1600, PANBUF = 900, WIDE = 1.28;
+    var hi = 0;
+    var startPan = function (img) {
+      if (img._pan) { img._pan.cancel(); img._pan = null; }
+      var box = img.parentElement.clientWidth;
+      var hh = img.parentElement.clientHeight;
+      var ar = (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 1.6;
+      // Wide enough that the sweep has range on any viewport, without over-upscaling.
+      var drawW = Math.max(hh * ar, box * WIDE, box);
+      img.style.width = drawW.toFixed(1) + 'px';
+      var dist = drawW - box;
+      img.classList.add('panning');
+      img._pan = img.animate([
+        { transform: 'translateX(0px)' },
+        { transform: 'translateX(' + (-dist).toFixed(1) + 'px)' }
+      ], { duration: DWELL + FADE + PANBUF, easing: 'cubic-bezier(.42,.02,.28,1)', fill: 'forwards' });
+      if (document.hidden) img._pan.pause();
+    };
+    var show = function (i) {
+      himgs.forEach(function (im, j) { im.classList.toggle('on', j === i); });
+      hcap.textContent = hcn[i];
+      hi = i;
+      if (himgs[i].naturalWidth) { startPan(himgs[i]); }
+      else { himgs[i].addEventListener('load', function h() { himgs[i].removeEventListener('load', h); if (hi === i) startPan(himgs[i]); }); }
+    };
+    if (RM) {
+      himgs[0].classList.add('on');
+      hcap.textContent = hcn[0];
+    } else {
+      show(Math.floor(Math.random() * himgs.length));
+      setInterval(function () {
+        if (document.hidden) return;
+        show((hi + 1) % himgs.length);
+      }, DWELL);
+      document.addEventListener('visibilitychange', function () {
+        himgs.forEach(function (im) { if (im._pan) { if (document.hidden) im._pan.pause(); else im._pan.play(); } });
+      });
+      var rT;
+      window.addEventListener('resize', function () {
+        clearTimeout(rT);
+        rT = setTimeout(function () { startPan(himgs[hi]); }, 250);
+      });
+    }
   }
 
   // Contact form -> mailto

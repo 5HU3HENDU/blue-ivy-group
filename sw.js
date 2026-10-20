@@ -1,4 +1,4 @@
-const C = 'big-v3';
+const C = 'big-v4';
 const scope = new URL('./', self.registration.scope).pathname;
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
