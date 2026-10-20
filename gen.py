@@ -104,11 +104,34 @@ def pitem(img,alt,name,loc,cat,cap,depth=0):
 <div class="pl">{loc} &middot; {cat}</div>{c}
 </a>'''
 
+
+def blueprint_svg():
+    P=[]
+    def L(x1,y1,x2,y2): P.append('M%d %d L%d %d'%(x1,y1,x2,y2))
+    L(30,640,360,640)                                   # ground
+    L(60,640,60,120); L(180,640,180,120); L(60,120,180,120)   # tower 1 shell
+    y=120
+    while y<=640: L(60,y,180,y); y+=26                  # tower 1 slabs
+    x=84
+    while x<180: L(x,120,x,640); x+=24                  # tower 1 mullions
+    L(205,640,205,180); L(330,640,330,180); L(205,180,330,180) # tower 2 shell
+    y=180
+    while y<=640: L(205,y,330,y); y+=26
+    x=230
+    while x<330: L(x,180,x,640); x+=25
+    L(44,120,44,640); L(38,120,50,120); L(38,640,50,640)       # dimension line
+    P.append('M60 118 A60 60 0 0 1 180 118')            # sweep arc over tower 1
+    L(200,652,360,652); L(200,688,360,688); L(200,652,200,688)
+    L(360,652,360,688); L(200,670,360,670); L(280,652,280,688) # title block
+    return ''.join('<path d="%s"/>'%d for d in P)
+BPSVG=blueprint_svg()
+
 # ---------------- home ----------------
 home_body=f'''
 <section class="hero">
 <div class="hero-img"><img src="assets/img/siddhanchal.jpg" alt="Design render of Siddhanchal Residency, Ghatkopar, at dusk" fetchpriority="high"></div>
 <div class="hero-scrim"></div>
+<div class="bp" id="bp" hidden><svg viewBox="0 0 390 700" aria-hidden="true">{BPSVG}</svg></div>
 <div class="hero-txt"><div class="wrap">
 <div class="hero-kick">Blue Ivy Group &middot; Ghatkopar West, Mumbai</div>
 <h1>End-to-end construction, interiors and redevelopment.</h1>

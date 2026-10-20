@@ -106,6 +106,36 @@
     upd();
   }
 
+  // Blueprint intro: decorative linework draws once per session, then fades to the render
+  var bp = document.getElementById('bp');
+  if (bp) {
+    var seen = false;
+    try { seen = !!sessionStorage.getItem('big-bp'); } catch (e) {}
+    if (!RM && !seen) {
+      bp.hidden = false;
+      var ps = bp.querySelectorAll('path');
+      ps.forEach(function (p, i) {
+        var l = p.getTotalLength();
+        p.style.strokeDasharray = l;
+        p.style.strokeDashoffset = l;
+        p.style.transition = 'stroke-dashoffset 1.9s ease ' + (i * 16) + 'ms';
+      });
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          ps.forEach(function (p) { p.style.strokeDashoffset = '0'; });
+        });
+      });
+      var tot = 1900 + ps.length * 16 + 700;
+      setTimeout(function () {
+        bp.classList.add('fade');
+        try { sessionStorage.setItem('big-bp', '1'); } catch (e) {}
+      }, tot);
+      setTimeout(function () { if (bp.parentNode) bp.parentNode.removeChild(bp); }, tot + 1300);
+    } else if (bp.parentNode) {
+      bp.parentNode.removeChild(bp);
+    }
+  }
+
   // Contact form -> mailto
   var qf = document.getElementById('qform');
   if (qf) {
