@@ -107,8 +107,10 @@
   }
 
   // Moving-wallpaper hero: each render glides across its full width (left edge to right
-  // edge, so the whole image is seen), then fades to the next. Plain-text caption, fully
-  // passive, reduced-motion users get a static hero.
+  // edge, so the whole image is seen), then fades to the next. The crossfade is a true
+  // overlap: the outgoing render stays fully opaque underneath while the incoming one -
+  // decoded before the fade starts - fades in on top, so the dark background never shows.
+  // Plain-text caption, fully passive, reduced-motion users get a static hero.
   var himgs = document.querySelectorAll('.hero-img .hpi');
   var hcap = document.getElementById('heroCap');
   if (himgs.length > 0 && hcap) {
@@ -119,6 +121,9 @@
     ];
     var DWELL = 8000, FADE = 1600, PANBUF = 900, WIDE = 1.28;
     var hi = 0;
+    var cur = 0;      // markup opens with the first render visible
+    var pending = -1; // index whose decode/load is in flight
+    var fadeN = 0;    // token so only the latest fade settles the layers
     var startPan = function (img) {
       if (img._pan) { img._pan.cancel(); img._pan = null; }
       var box = img.parentElement.clientWidth;
@@ -135,18 +140,61 @@
       ], { duration: DWELL + FADE + PANBUF, easing: 'cubic-bezier(.42,.02,.28,1)', fill: 'forwards' });
       if (document.hidden) img._pan.pause();
     };
-    var show = function (i) {
-      himgs.forEach(function (im, j) { im.classList.toggle('on', j === i); });
+    var beginShow = function (i) {
+      var next = himgs[i];
+      if (cur !== i) {
+        var prev = himgs[cur];
+        prev.classList.remove('on');
+        prev.classList.add('under'); // stays fully opaque beneath the incoming render
+      }
       hcap.textContent = hcn[i];
-      hi = i;
-      if (himgs[i].naturalWidth) { startPan(himgs[i]); }
-      else { himgs[i].addEventListener('load', function h() { himgs[i].removeEventListener('load', h); if (hi === i) startPan(himgs[i]); }); }
+      hi = i; cur = i;
+      next.classList.add('on'); // fades in on top of the outgoing render
+      var my = ++fadeN;
+      var settle = function () {
+        if (my !== fadeN) return;
+        // Incoming is fully opaque now; hide everything else instantly (no fade-out,
+        // so there is no frame where both layers are half-transparent and the background shows through).
+        himgs.forEach(function (im, j) { if (j !== i) im.classList.remove('on', 'under'); });
+      };
+      var to = setTimeout(settle, FADE + 500);
+      var te = function (e) {
+        if (e.propertyName !== 'opacity') return;
+        next.removeEventListener('transitionend', te);
+        clearTimeout(to);
+        settle();
+      };
+      next.addEventListener('transitionend', te);
+      if (next.naturalWidth) { startPan(next); }
+      else { next.addEventListener('load', function h() { next.removeEventListener('load', h); if (hi === i) startPan(next); }); }
+    };
+    var show = function (i) {
+      if (cur === i || pending === i) return;
+      var next = himgs[i];
+      pending = i;
+      var begin = function () {
+        if (pending !== i) return;
+        pending = -1;
+        beginShow(i);
+      };
+      var ready = function () {
+        // Decode before fading so a slow connection never fades in an unpainted image.
+        if (next.decode) { next.decode().then(begin, begin); } else { begin(); }
+      };
+      if (next.complete && next.naturalWidth) { ready(); }
+      else {
+        var h = function () { next.removeEventListener('load', h); ready(); };
+        next.addEventListener('load', h);
+        // Never wait forever: the overlap crossfade keeps the old render opaque anyway.
+        setTimeout(function () { next.removeEventListener('load', h); begin(); }, 4000);
+      }
     };
     if (RM) {
       himgs[0].classList.add('on');
       hcap.textContent = hcn[0];
     } else {
-      show(Math.floor(Math.random() * himgs.length));
+      var first = Math.floor(Math.random() * himgs.length);
+      if (first === 0) { beginShow(0); } else { show(first); }
       setInterval(function () {
         if (document.hidden) return;
         show((hi + 1) % himgs.length);
